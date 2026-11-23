@@ -1,4 +1,5 @@
 %global debug_package %{nil}
+%global _find_debuginfo_opts --no-ar-files
 Summary:	Glasgow Haskell Compiler 6.10.4
 Name:		ghc610
 Version:	6.10.4
