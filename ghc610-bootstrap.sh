@@ -72,6 +72,7 @@ command -v ghc | grep -q ghc66-prefix || fail "PATH ghc is $(command -v ghc)"
 command -v happy | grep -q happy-1.16-prefix || fail "PATH happy is $(command -v happy)"
 command -v alex | grep -q alex-2.1.0-prefix || fail "PATH alex is $(command -v alex)"
 command -v gcc | grep -q '/ghc610-work/bin/gcc' || fail "PATH gcc is $(command -v gcc)"
+command -v hsc2hs | grep -q '/ghc66-work/ghc66-prefix/bin/hsc2hs' || fail "PATH hsc2hs is $(command -v hsc2hs)"
 
 if [ ! -d "$TREE/mk" ]; then
 	phase "unpack"
@@ -139,7 +140,11 @@ printf '%s\n' "$alex_mk" | grep -q alex-2.1.0-prefix || fail "config.mk ALEX is 
 
 phase "make"
 if ! stdbuf -oL -eL make -j1 > "$WORK/logs/make.log" 2>&1; then
-	fail "make: $(tail -8 "$WORK/logs/make.log" | tr '\n' ' ' | cut -c1-500)"
+	msg=$(grep -E 'Error|error:|Setup:|cannot|missing|No such|FAILED|not found|fatal error' "$WORK/logs/make.log" | tail -12 | tr '\n' ' ' | cut -c1-700 || true)
+	if [ -z "$msg" ]; then
+		msg=$(tail -8 "$WORK/logs/make.log" | tr '\n' ' ' | cut -c1-700)
+	fi
+	fail "make: $msg"
 fi
 phase "make rc=0"
 

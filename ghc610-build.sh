@@ -30,7 +30,41 @@ cat > "$ROOT/build/ghc66-work/ghc66-prefix/bin/ghc-pkg" << EOF
 #!/bin/sh
 exec /usr/bin/ghc-pkg66 "\$@"
 EOF
-chmod 755 "$ROOT/build/ghc66-work/ghc66-prefix/bin/ghc" "$ROOT/build/ghc66-work/ghc66-prefix/bin/ghc-pkg"
+# libraries/hpc has a .hsc file, and the 6.10 build runs that Cabal
+# configure before it has built utils/hsc2hs. ghc66 ships hsc2hs-bin in
+# the libdir, not on PATH. Cabal also rewrites package.conf's $topdir
+# from this wrapper's directory, so the -I/-L it passes miss HsFFI.h
+# and libHSbase_cbits. This wrapper adds the real libdir.
+cat > "$ROOT/build/ghc66-work/ghc66-prefix/bin/hsc2hs" << 'EOF'
+#!/bin/sh
+ghcbin=$(command -v ghc66) || {
+	echo "hsc2hs: ghc66 is not on PATH" >&2
+	exit 1
+}
+here=$(CDPATH= cd -- "$(dirname "$ghcbin")" && pwd)
+root=$(dirname "$here")
+if [ -x "$root/lib64/ghc-6.6/hsc2hs-bin" ]; then
+	top="$root/lib64/ghc-6.6"
+elif [ -x "$root/lib/ghc-6.6/hsc2hs-bin" ]; then
+	top="$root/lib/ghc-6.6"
+else
+	echo "hsc2hs: no hsc2hs-bin next to $ghcbin" >&2
+	exit 1
+fi
+extra="--cc=$top/bin/host-gcc"
+tflag="--template=$top/template-hsc.h"
+for arg do
+	case "$arg" in
+	-c*|--cc=*) extra= ;;
+	-t*|--template=*) tflag= ;;
+	--) break ;;
+	esac
+done
+exec "$top/hsc2hs-bin" $tflag $extra --cflag="-I$top/include" --lflag="-L$top" "$@"
+EOF
+chmod 755 "$ROOT/build/ghc66-work/ghc66-prefix/bin/ghc" \
+	"$ROOT/build/ghc66-work/ghc66-prefix/bin/ghc-pkg" \
+	"$ROOT/build/ghc66-work/ghc66-prefix/bin/hsc2hs"
 mkdir -p "$ROOT/build/happy-1.16-prefix/bin"
 ln -sfn /usr/bin/happy116 "$ROOT/build/happy-1.16-prefix/bin/happy"
 mkdir -p "$ROOT/build/alex-2.1.0-prefix/bin"
