@@ -20,7 +20,7 @@ ALEX=$ROOT/build/alex-2.1.0-prefix/bin/alex
 
 export TMPDIR=$WORK/tmp
 export LD_LIBRARY_PATH="$GMP/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-mkdir -p "$TMPDIR" "$WORK/logs" "$WORK/bin" "$WORK/shipped"
+mkdir -p "$TMPDIR" "$WORK/logs" "$WORK/bin" "$WORK/shipped" "$WORK/src"
 
 exec 9>"$WORK/bootstrap.lock"
 flock -n 9 || { printf 'GHC610_FAILED: another bootstrap holds %s\n' "$WORK/bootstrap.lock"; exit 1; }
