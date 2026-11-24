@@ -65,6 +65,40 @@ EOF
 chmod 755 "$ROOT/build/ghc66-work/ghc66-prefix/bin/ghc" \
 	"$ROOT/build/ghc66-work/ghc66-prefix/bin/ghc-pkg" \
 	"$ROOT/build/ghc66-work/ghc66-prefix/bin/hsc2hs"
+# Cabal 1.6 rewrites $topdir from the directory that contains bin/ghc.
+# The stage1 compiler's own hsc2hs does not use the wrapper above, so
+# its gcc line needs $topdir/include/HsFFI.h and $topdir/libHSbase_cbits.a.
+# Mirror the installed libdir and keep the shims in bin/.
+ghcbin=$(command -v ghc66) || {
+	echo "ghc610: ghc66 is not on PATH" >&2
+	exit 1
+}
+here=$(CDPATH= cd -- "$(dirname "$ghcbin")" && pwd)
+root=$(dirname "$here")
+if [ -d "$root/lib64/ghc-6.6" ]; then
+	reallib="$root/lib64/ghc-6.6"
+elif [ -d "$root/lib/ghc-6.6" ]; then
+	reallib="$root/lib/ghc-6.6"
+else
+	echo "ghc610: no ghc-6.6 libdir next to $ghcbin" >&2
+	exit 1
+fi
+boot="$ROOT/build/ghc66-work/ghc66-prefix"
+for item in "$reallib"/*; do
+	name=$(basename "$item")
+	if [ "$name" = bin ]; then
+		for b in "$item"/*; do
+			bn=$(basename "$b")
+			if [ ! -e "$boot/bin/$bn" ]; then
+				ln -sfn "$b" "$boot/bin/$bn"
+			fi
+		done
+	elif [ ! -e "$boot/$name" ]; then
+		ln -sfn "$item" "$boot/$name"
+	fi
+done
+test -f "$boot/include/HsFFI.h"
+test -f "$boot/libHSbase_cbits.a"
 mkdir -p "$ROOT/build/happy-1.16-prefix/bin"
 ln -sfn /usr/bin/happy116 "$ROOT/build/happy-1.16-prefix/bin/happy"
 mkdir -p "$ROOT/build/alex-2.1.0-prefix/bin"
