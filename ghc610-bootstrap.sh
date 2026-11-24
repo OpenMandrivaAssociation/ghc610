@@ -140,11 +140,15 @@ printf '%s\n' "$alex_mk" | grep -q alex-2.1.0-prefix || fail "config.mk ALEX is 
 
 phase "make"
 if ! stdbuf -oL -eL make -j1 > "$WORK/logs/make.log" 2>&1; then
-	msg=$(grep -E 'Error|error:|Setup:|cannot|missing|No such|FAILED|not found|fatal error' "$WORK/logs/make.log" | tail -12 | tr '\n' ' ' | cut -c1-700 || true)
-	if [ -z "$msg" ]; then
-		msg=$(tail -8 "$WORK/logs/make.log" | tr '\n' ' ' | cut -c1-700)
-	fi
-	fail "make: $msg"
+	# libffi's recursive make line contains "missing" (the MAKEINFO helper)
+	# and is longer than a joined grep can show. Print make's stop lines
+	# and a short tail instead of that one line.
+	echo "GHC610_FAILED: make rc != 0"
+	echo "GHC610_FAILED: stop lines:"
+	grep -n ': \*\*' "$WORK/logs/make.log" | tail -20 || true
+	echo "GHC610_FAILED: log tail:"
+	tail -40 "$WORK/logs/make.log" | cut -c1-220 || true
+	exit 1
 fi
 phase "make rc=0"
 
